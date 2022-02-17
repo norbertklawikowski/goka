@@ -91,6 +91,8 @@ func NewProcessor(brokers []string, gg *GroupGraph, options ...ProcessorOption) 
 		return nil, fmt.Errorf(errApplyOptions, err)
 	}
 
+	opts.visitorOptions = collectVisitorOptions(gg.visitors)
+
 	npar, err := prepareTopics(brokers, gg, opts)
 	if err != nil {
 		return nil, err
@@ -907,16 +909,36 @@ func (g *Processor) Stop() {
 // * number of visited items
 // * error
 func (g *Processor) VisitAllWithStats(ctx context.Context, name string, meta interface{}) (int64, error) {
-	g.mTables.RLock()
-
 	if g.isStateless() {
 		return 0, fmt.Errorf("cannot visit values in stateless processor")
 	}
 
+	opts, hasOpts := g.opts.visitorOptions[name]
+	if !hasOpts {
+		return g.VisitAllParallel(ctx, name, meta)
+	}
+
+	return g.visitAllWithOpts(ctx, name, meta, opts)
+}
+
+// VisitAllWithOpts visits all keys by passing the visit request
+// to all partitions.
+// Various options can be defined to adjust the process of visiting keys
+// The optional argument "meta" will be forwarded to the visit-function of each key of the table.
+// The function returns when
+// * all values have been visited or
+// * the context is cancelled or
+// * the processor rebalances/shuts down
+// Return parameters:
+// * number of visited items
+// * error
+func (g *Processor) visitAllWithOpts(ctx context.Context, name string, meta interface{}, opts visitorOptions) (int64, error) {
 	errg, visitCtx := multierr.NewErrGroup(ctx)
 	var (
 		visited int64
 	)
+
+	g.mTables.RLock()
 	for _, part := range g.partitions {
 		// we'll only do the visit for active mode partitions
 		// because visit essentially provides write access, which passive partitions don't have
@@ -924,9 +946,55 @@ func (g *Processor) VisitAllWithStats(ctx context.Context, name string, meta int
 			continue
 		}
 		part := part
+
+		if opts.processPartitionsSequentially {
+			err := part.VisitValues(visitCtx, name, meta, &visited)
+			if err != nil {
+				return visited, err
+			}
+		} else {
+			errg.Go(func() error {
+				return part.VisitValues(visitCtx, name, meta, &visited)
+			})
+		}
+	}
+
+	g.mTables.RUnlock()
+
+	// wait for the visitors
+	err := errg.Wait().ErrorOrNil()
+	return visited, err
+}
+
+// VisitAllParallel visits all keys in parallel by passing the visit request
+// to all partitions.
+// The optional argument "meta" will be forwarded to the visit-function of each key of the table.
+// The function returns when
+// * all values have been visited or
+// * the context is cancelled or
+// * the processor rebalances/shuts down
+// Return parameters:
+// * number of visited items
+// * error
+func (g *Processor) VisitAllParallel(ctx context.Context, name string, meta interface{}) (int64, error) {
+	errg, visitCtx := multierr.NewErrGroup(ctx)
+	var (
+		visited int64
+	)
+
+	g.mTables.RLock()
+	for _, part := range g.partitions {
+		// we'll only do the visit for active mode partitions
+		// because visit essentially provides write access, which passive partitions don't have
+		if part.runMode != runModeActive {
+			continue
+		}
+		part := part
+
 		errg.Go(func() error {
 			return part.VisitValues(visitCtx, name, meta, &visited)
 		})
+
 	}
 
 	g.mTables.RUnlock()

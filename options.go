@@ -146,6 +146,8 @@ type poptions struct {
 		topicmgr       TopicManagerBuilder
 		backoff        BackoffBuilder
 	}
+
+	visitorOptions map[string]visitorOptions
 }
 
 // WithUpdateCallback defines the callback called upon recovering a message
@@ -275,6 +277,42 @@ func WithProducerDefaultHeaders(hdr Headers) ProcessorOption {
 	return func(p *poptions, graph *GroupGraph) {
 		p.producerDefaultHeaders = hdr
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// visitor options
+///////////////////////////////////////////////////////////////////////////////
+
+// VisitorOption defines a configuration option to be used when creating a visitor.
+type VisitorOption func(*visitorOptions)
+
+// processor options
+type visitorOptions struct {
+	processPartitionsSequentially bool
+}
+
+// WithUpdateCallback defines the callback called upon recovering a message
+// from the log.
+func WithSequentialPartitionProcessing(cb UpdateCallback) VisitorOption {
+	return func(o *visitorOptions) {
+		o.processPartitionsSequentially = true
+	}
+}
+
+func (opt *visitorOptions) applyOptions(opts ...VisitorOption) {
+	for _, o := range opts {
+		o(opt)
+	}
+}
+
+func collectVisitorOptions(visitors []Edge) map[string]visitorOptions {
+	opts := make(map[string]visitorOptions)
+
+	for _, v := range visitors {
+		opts[v.(*visitor).name] = v.(*visitor).opts
+	}
+
+	return opts
 }
 
 // NilHandling defines how nil messages should be handled by the processor.

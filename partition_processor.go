@@ -685,7 +685,7 @@ func (pp *PartitionProcessor) processMessage(ctx context.Context, wg *sync.WaitG
 // the function returns after all items of the table have been added to the channel.
 func (pp *PartitionProcessor) VisitValues(ctx context.Context, name string, meta interface{}, visited *int64) error {
 	if _, ok := pp.visitCallbacks[name]; !ok {
-		return fmt.Errorf("unconfigured visit callback. Did you initialize the processor with DefineGroup(..., Visit(%s, ...), ...)?", name)
+		return fmt.Errorf("unconfigured visit callback. Did you initialize the processor with DefineGroup(..., Visitor(%s, ...), ...)?", name)
 	}
 
 	it, err := pp.table.Iterator()

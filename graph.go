@@ -369,6 +369,7 @@ func Inputs(topics Streams, c Codec, cb ProcessCallback) Edge {
 type visitor struct {
 	name string
 	cb   ProcessCallback
+	opts visitorOptions
 }
 
 func (m *visitor) Topic() string {
@@ -384,8 +385,12 @@ func (m *visitor) String() string {
 // Visitor adds a visitor edge to the processor. This allows to iterate over the whole processor state
 // while running. Note that this can block rebalance or processor shutdown.
 // EXPERIMENTAL! This feature is not fully tested and might trigger unknown bugs. Be careful!
-func Visitor(name string, cb ProcessCallback) Edge {
+func Visitor(name string, cb ProcessCallback, visitorOpts ...VisitorOption) Edge {
+	opts := visitorOptions{}
+	opts.applyOptions(visitorOpts...)
+
 	return &visitor{
+		opts: opts,
 		name: name,
 		cb:   cb,
 	}
