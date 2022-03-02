@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
@@ -113,9 +112,7 @@ func (s *storage) Iterator() (Iterator, error) {
 	}
 
 	return &iterator{
-		iter: s.db.NewIterator(nil, &opt.ReadOptions{
-			DontFillCache: true,
-		}),
+		iter: s.db.NewIterator(nil, nil),
 		snap: snap,
 	}, nil
 }
