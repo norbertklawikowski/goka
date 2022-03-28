@@ -293,7 +293,7 @@ type visitorOptions struct {
 
 // WithUpdateCallback defines the callback called upon recovering a message
 // from the log.
-func WithSequentialPartitionProcessing() VisitorOption {
+func WithThrottledPartitionProcessing() VisitorOption {
 	return func(o *visitorOptions) {
 		o.processPartitionsSequentially = true
 	}

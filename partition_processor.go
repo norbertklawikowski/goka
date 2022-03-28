@@ -693,6 +693,8 @@ func (pp *PartitionProcessor) VisitValues(ctx context.Context, name string, meta
 		return fmt.Errorf("error creating storage iterator")
 	}
 
+	defer it.Release()
+
 	var wg sync.WaitGroup
 	// drain the channel and set all items to done we have added.
 	// Otherwise the caller will wait forever on the waitgroup
