@@ -709,7 +709,6 @@ func (pp *PartitionProcessor) VisitValues(ctx context.Context, name string, meta
 		}
 	}
 
-	defer it.Release()
 	for it.Next() {
 		// add one that we were able to be put into the queue.
 		// wg.Done will be called by the visit handler as commit
