@@ -216,12 +216,17 @@ func WithPartitionChannelSize(size int) ProcessorOption {
 
 // WithLogger sets the logger the processor should use. By default, processors
 // use the standard library logger.
-func WithLogger(l Logger) ProcessorOption {
+// To enable debug logging, pass true as an optional parameter
+func WithLogger(l Logger, debug ...bool) ProcessorOption {
 	return func(o *poptions, gg *GroupGraph) {
 		if prefixLogger, ok := l.(logger); ok {
 			o.log = prefixLogger
 		} else {
-			o.log = wrapLogger(l)
+			debugLog := defaultLogger.debug
+			if len(debug) > 0 {
+				debugLog = debug[0]
+			}
+			o.log = wrapLogger(l, debugLog)
 		}
 	}
 }
@@ -401,12 +406,17 @@ type voptions struct {
 
 // WithViewLogger sets the logger the view should use. By default, views
 // use the standard library logger.
-func WithViewLogger(l Logger) ViewOption {
+// To enable debug logging, pass true as an optional parameter
+func WithViewLogger(l Logger, debug ...bool) ViewOption {
 	return func(o *voptions, table Table, codec Codec) {
 		if prefixLogger, ok := l.(logger); ok {
 			o.log = prefixLogger
 		} else {
-			o.log = wrapLogger(l)
+			debugLog := defaultLogger.debug
+			if len(debug) > 0 {
+				debugLog = debug[0]
+			}
+			o.log = wrapLogger(l, debugLog)
 		}
 	}
 }
@@ -550,12 +560,17 @@ type eoptions struct {
 
 // WithEmitterLogger sets the logger the emitter should use. By default,
 // emitters use the standard library logger.
-func WithEmitterLogger(l Logger) EmitterOption {
+// To enable debug logging, pass true as an optional parameter
+func WithEmitterLogger(l Logger, debug ...bool) EmitterOption {
 	return func(o *eoptions, topic Stream, codec Codec) {
 		if prefixLogger, ok := l.(logger); ok {
 			o.log = prefixLogger
 		} else {
-			o.log = wrapLogger(l)
+			debugLog := defaultLogger.debug
+			if len(debug) > 0 {
+				debugLog = debug[0]
+			}
+			o.log = wrapLogger(l, debugLog)
 		}
 	}
 }
